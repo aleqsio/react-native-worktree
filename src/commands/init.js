@@ -44,22 +44,36 @@ function detectBundleId(platform) {
   return null;
 }
 
+function parsePlatforms(input) {
+  const platforms = input.split(',').map(p => p.trim()).filter(Boolean);
+  for (const p of platforms) {
+    if (p !== 'ios' && p !== 'android') {
+      return { error: `Invalid platform: ${p}. Must be 'ios' or 'android'.` };
+    }
+  }
+  if (platforms.length === 0) {
+    return { error: 'At least one platform is required.' };
+  }
+  return { platforms: [...new Set(platforms)] };
+}
+
 export default function initCommand(program) {
   program
     .command('init')
-    .description('Initialize config with bundle ID and platform')
+    .description('Initialize config with bundle ID and platforms')
     .option('--bundle-id <id>', 'App bundle identifier')
-    .option('--platform <platform>', 'Target platform (ios or android)', 'ios')
+    .option('--platforms <list>', 'Target platforms, comma-separated (ios,android)', 'ios')
     .action((opts) => {
-      const platform = opts.platform;
-      if (platform !== 'ios' && platform !== 'android') {
-        console.error(chalk.red(`Invalid platform: ${platform}. Must be 'ios' or 'android'.`));
+      const { platforms, error } = parsePlatforms(opts.platforms);
+      if (error) {
+        console.error(chalk.red(error));
         process.exit(1);
       }
 
       let bundleId = opts.bundleId;
       if (!bundleId) {
-        bundleId = detectBundleId(platform);
+        // Try detecting with first platform
+        bundleId = detectBundleId(platforms[0]);
         if (bundleId) {
           console.log(chalk.dim(`Auto-detected bundle ID: ${bundleId}`));
         } else {
@@ -69,19 +83,22 @@ export default function initCommand(program) {
       }
 
       const existing = loadConfig();
-      if (existing) {
-        existing.bundleId = bundleId;
-        existing.platform = platform;
+      if (existing && existing.apps) {
+        // Add or update app entry
+        existing.apps[bundleId] = existing.apps[bundleId] || { platforms: [], worktrees: {} };
+        existing.apps[bundleId].platforms = platforms;
         saveConfig(existing);
       } else {
         saveConfig({
-          bundleId,
-          platform,
-          worktrees: {},
-          nextPort: 8082,
+          apps: {
+            [bundleId]: {
+              platforms,
+              worktrees: {},
+            },
+          },
         });
       }
 
-      console.log(chalk.green(`Initialized react-native-worktree for ${chalk.bold(bundleId)} (${platform})`));
+      console.log(chalk.green(`Initialized react-native-worktree for ${chalk.bold(bundleId)} (${platforms.join(', ')})`));
     });
 }

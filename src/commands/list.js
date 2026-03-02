@@ -7,49 +7,81 @@ export default function listCommand(program) {
   program
     .command('list')
     .description('List all registered worktrees with Metro status')
-    .action(async () => {
+    .option('--app <bundleId>', 'Filter by app bundle identifier')
+    .action(async (opts) => {
       const config = loadConfig();
-      if (!config) {
+      if (!config || !config.apps) {
         console.error(chalk.red('Not initialized. Run `react-native-worktree init` first.'));
         process.exit(1);
       }
 
-      const worktrees = config.worktrees || {};
-      const names = Object.keys(worktrees);
+      const allLocks = getStatus();
 
-      if (names.length === 0) {
-        console.log(chalk.dim('No worktrees registered. Run `react-native-worktree add <name>` to add one.'));
-        return;
+      // Build list of apps to show
+      const appIds = opts.app ? [opts.app] : Object.keys(config.apps);
+
+      for (const appId of appIds) {
+        const app = config.apps[appId];
+        if (!app) {
+          console.error(chalk.red(`App '${appId}' not found.`));
+          continue;
+        }
+
+        const worktrees = app.worktrees || {};
+        const names = Object.keys(worktrees);
+
+        console.log(chalk.bold(`\n${appId}`) + chalk.dim(` (${app.platforms.join(', ')})`));
+
+        if (names.length === 0) {
+          console.log(chalk.dim('  No worktrees registered.'));
+          continue;
+        }
+
+        // Check Metro status for all ports in parallel
+        const statuses = await Promise.all(
+          names.map(name => isMetroRunning(worktrees[name].port))
+        );
+
+        // Collect lock info for this app's worktrees
+        const lockHolders = new Set();
+        for (const [, entry] of Object.entries(allLocks)) {
+          if (entry.app === appId) lockHolders.add(entry.holder);
+        }
+        // Build platform lock details
+        const lockDetails = {};
+        for (const [plat, entry] of Object.entries(allLocks)) {
+          if (entry.app === appId && entry.holder) {
+            if (!lockDetails[entry.holder]) lockDetails[entry.holder] = [];
+            lockDetails[entry.holder].push(plat);
+          }
+        }
+
+        // Print table header
+        console.log(
+          '  ' +
+          chalk.bold('Name'.padEnd(20)) +
+          chalk.bold('Port'.padEnd(8)) +
+          chalk.bold('Metro'.padEnd(10)) +
+          chalk.bold('Lock')
+        );
+        console.log('  ' + '-'.repeat(55));
+
+        names.forEach((name, i) => {
+          const wt = worktrees[name];
+          const metro = statuses[i] ? chalk.green('running') : chalk.dim('stopped');
+          const platforms = lockDetails[name];
+          const lockStr = platforms ? chalk.yellow(platforms.join(',')) : '';
+
+          console.log(
+            '  ' +
+            name.padEnd(20) +
+            String(wt.port).padEnd(8) +
+            metro.padEnd(19) + // extra for ANSI codes
+            lockStr
+          );
+        });
       }
 
-      const lock = getStatus();
-
-      // Check Metro status for all ports in parallel
-      const statuses = await Promise.all(
-        names.map(name => isMetroRunning(worktrees[name].port))
-      );
-
-      // Print table header
-      console.log(
-        chalk.bold('Name'.padEnd(20)) +
-        chalk.bold('Port'.padEnd(8)) +
-        chalk.bold('Metro'.padEnd(10)) +
-        chalk.bold('Lock')
-      );
-      console.log('-'.repeat(50));
-
-      names.forEach((name, i) => {
-        const wt = worktrees[name];
-        const metro = statuses[i] ? chalk.green('running') : chalk.dim('stopped');
-        const isHolder = lock.held && lock.holder === name;
-        const lockStr = isHolder ? chalk.yellow('held') : '';
-
-        console.log(
-          name.padEnd(20) +
-          String(wt.port).padEnd(8) +
-          metro.padEnd(19) + // extra for ANSI codes
-          lockStr
-        );
-      });
+      console.log('');
     });
 }
