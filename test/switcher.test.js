@@ -12,7 +12,8 @@ function startServer(port, response) {
       res.writeHead(200);
       res.end(response);
     });
-    server.listen(port, '127.0.0.1', () => resolve(server));
+    // Listen without host to bind all interfaces (IPv4 + IPv6)
+    server.listen(port, () => resolve(server));
   });
 }
 

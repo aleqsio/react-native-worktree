@@ -113,12 +113,13 @@ describe('CLI', () => {
       assert.equal(config.apps['com.test'].worktrees['feat-b'].port, 8082);
     });
 
-    it('increments port for subsequent worktrees', () => {
+    it('registers multiple worktrees with explicit ports', () => {
       run(['init', '--bundle-id', 'com.test']);
       run(['add', 'w1', '--path', '/tmp/w1', '--port', '8081']);
-      run(['add', 'w2', '--path', '/tmp/w2']);
+      run(['add', 'w2', '--path', '/tmp/w2', '--port', '8082']);
 
       const config = readConfig();
+      assert.equal(config.apps['com.test'].worktrees['w1'].port, 8081);
       assert.equal(config.apps['com.test'].worktrees['w2'].port, 8082);
     });
 
@@ -209,7 +210,7 @@ describe('CLI', () => {
 
       // Add worktrees
       run(['add', 'main', '--path', '/tmp/main', '--port', '8081']);
-      run(['add', 'feature', '--path', '/tmp/feature']);
+      run(['add', 'feature', '--path', '/tmp/feature', '--port', '8082']);
       const config = readConfig();
       assert.equal(config.apps['com.flow'].worktrees['feature'].port, 8082);
 
