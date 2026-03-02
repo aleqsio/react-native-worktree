@@ -3,6 +3,7 @@
 # react-native-worktree
 
 A mutex tool for react-native/Expo that allows multiple agents to write code at the same time in worktrees.
+
 They can then use simulator/emulator to test and the tool queues them up automatically.
 
 # How it works
