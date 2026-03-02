@@ -48,9 +48,13 @@ Meanwhile, another agent in a separate session:
 
 This agent creates its own worktree. When it needs the device, it calls `switch` — if the first agent still holds the lock for that platform, it waits automatically until the device is free.
 
-## Deep dive (you probably don't need to read it)
+# Demo
 
-### Port Switching
+https://github.com/user-attachments/assets/8c3b8392-7f84-4f16-ade2-48e3022c42f4
+
+# Deep dive (you probably don't need to read it)
+
+## Port Switching
 
 **iOS Simulator** — writes `RCT_jsLocation` to the app's `NSUserDefaults`, then terminates and relaunches:
 
@@ -71,7 +75,7 @@ adb shell monkey -p <packageName> -c android.intent.category.LAUNCHER 1
 
 No proxy, no native module, no app changes required.
 
-### Mutex
+## Mutex
 
 File-based cooperative lock at `~/.rnwt/lock.json`, keyed by platform. iOS and Android locks are independent — two agents can hold different platform locks simultaneously.
 
@@ -80,7 +84,7 @@ File-based cooperative lock at `~/.rnwt/lock.json`, keyed by platform. iOS and A
 
 The lock has a heartbeat/staleness model: each `switch` call updates a timestamp. If the holder stops calling (crashed, moved on), the timestamp goes stale after the inactivity timeout (default 60s) and another agent can take over. The `--timeout` flag on `switch` controls this inactivity threshold.
 
-### Port Reclamation
+## Port Reclamation
 
 When adding a worktree without `--port`, the tool probes all existing ports for running Metro servers. If any port has Metro stopped (the worktree's server was killed), it's reused. Otherwise, a new port is assigned as `max(all ports) + 1`.
 
