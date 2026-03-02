@@ -62,19 +62,40 @@ export default function initCommand(program) {
     .command('init')
     .description('Initialize config with bundle ID and platforms')
     .option('--bundle-id <id>', 'App bundle identifier')
-    .option('--platforms <list>', 'Target platforms, comma-separated (ios,android)', 'ios')
+    .option('--platforms <list>', 'Target platforms, comma-separated (ios,android)')
     .option('--android-package <pkg>', 'Android package name (auto-detected if omitted)')
     .action((opts) => {
-      const { platforms, error } = parsePlatforms(opts.platforms);
-      if (error) {
-        console.error(chalk.red(error));
-        process.exit(1);
+      let platforms;
+      if (opts.platforms) {
+        const parsed = parsePlatforms(opts.platforms);
+        if (parsed.error) {
+          console.error(chalk.red(parsed.error));
+          process.exit(1);
+        }
+        platforms = parsed.platforms;
       }
 
+      // Detect both platform IDs from app.json
+      const iosId = detectBundleId('ios');
+      const androidId = detectBundleId('android');
+
+      // Auto-detect platforms when --platforms not provided
+      if (!platforms) {
+        if (iosId && androidId) {
+          platforms = ['ios', 'android'];
+        } else if (iosId) {
+          platforms = ['ios'];
+        } else if (androidId) {
+          platforms = ['android'];
+        } else {
+          platforms = ['ios']; // fallback default
+        }
+      }
+
+      // Resolve bundleId: explicit flag > iOS detection > Android detection
       let bundleId = opts.bundleId;
       if (!bundleId) {
-        // Try detecting with first platform
-        bundleId = detectBundleId(platforms[0]);
+        bundleId = iosId || androidId;
         if (bundleId) {
           console.log(chalk.dim(`Auto-detected bundle ID: ${bundleId}`));
         } else {
@@ -83,18 +104,14 @@ export default function initCommand(program) {
         }
       }
 
-      // Determine Android package name
-      let androidPackage = opts.androidPackage || null;
-      if (!androidPackage && platforms.includes('android') && platforms[0] !== 'android') {
-        // Primary bundleId came from a non-android platform; detect the android package separately
-        androidPackage = detectBundleId('android');
-        if (androidPackage) {
+      // Resolve Android package: explicit flag > detection
+      let androidPackage = opts.androidPackage || androidId || null;
+      if (androidPackage) {
+        if (androidPackage !== bundleId) {
           console.log(chalk.dim(`Auto-detected Android package: ${androidPackage}`));
+        } else {
+          androidPackage = null; // omit when it matches the primary key
         }
-      }
-      // Only store androidPackage when it differs from the primary key
-      if (androidPackage === bundleId) {
-        androidPackage = null;
       }
 
       const appEntry = { platforms, worktrees: {} };

@@ -74,8 +74,7 @@ describe('CLI', () => {
       assert.ok(stderr.includes('Invalid platform'));
     });
 
-    it('auto-detects bundle ID from app.json', () => {
-      // Create a fake app.json in the cwd
+    it('auto-detects bundle ID from app.json (ios only)', () => {
       writeFileSync(
         join(tmpDir, 'app.json'),
         JSON.stringify({ expo: { ios: { bundleIdentifier: 'com.detected' } } })
@@ -83,6 +82,41 @@ describe('CLI', () => {
       const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes('com.detected'));
+
+      const config = readConfig();
+      assert.deepEqual(config.apps['com.detected'].platforms, ['ios']);
+    });
+
+    it('auto-detects bundle ID from app.json (android only)', () => {
+      writeFileSync(
+        join(tmpDir, 'app.json'),
+        JSON.stringify({ expo: { android: { package: 'com.detected.android' } } })
+      );
+      const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('com.detected.android'));
+
+      const config = readConfig();
+      assert.deepEqual(config.apps['com.detected.android'].platforms, ['android']);
+    });
+
+    it('auto-detects both platforms when both defined in app.json', () => {
+      writeFileSync(
+        join(tmpDir, 'app.json'),
+        JSON.stringify({
+          expo: {
+            ios: { bundleIdentifier: 'com.test.my-app' },
+            android: { package: 'com.test.myapp' },
+          },
+        })
+      );
+      const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('com.test.my-app'));
+
+      const config = readConfig();
+      assert.deepEqual(config.apps['com.test.my-app'].platforms, ['ios', 'android']);
+      assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.myapp');
     });
 
     it('fails when no bundle ID can be detected', () => {
