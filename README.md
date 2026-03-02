@@ -1,4 +1,4 @@
-<img width="1440" height="505" alt="Header" src="https://github.com/user-attachments/assets/de529ed8-ff8d-4387-b2f6-fb0770eee588" />
+<img width="1440" height="505" alt="Header" src="https://github.com/user-attachments/assets/c77276e5-fef4-46a7-9704-281bc9826cb4" />
 
 # react-native-worktree
 
