@@ -1,15 +1,17 @@
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
-import { CONFIG_DIR, loadConfig } from './config.js';
+import { getConfigDir, loadConfig } from './config.js';
 
-const LOCK_PATH = join(CONFIG_DIR, 'lock.json');
+function getLockPath() {
+  return join(getConfigDir(), 'lock.json');
+}
 
 function readLock() {
-  if (!existsSync(LOCK_PATH)) {
+  if (!existsSync(getLockPath())) {
     return null;
   }
   try {
-    const data = JSON.parse(readFileSync(LOCK_PATH, 'utf-8'));
+    const data = JSON.parse(readFileSync(getLockPath(), 'utf-8'));
     return migrateLock(data);
   } catch {
     return null;
@@ -55,7 +57,7 @@ function detectAppFromConfig(config) {
 }
 
 function writeLockRaw(data) {
-  writeFileSync(LOCK_PATH, JSON.stringify(data, null, 2) + '\n');
+  writeFileSync(getLockPath(), JSON.stringify(data, null, 2) + '\n');
 }
 
 function writePlatformLock(platform, holder, bundleId) {
@@ -119,7 +121,7 @@ export function release(platform) {
   // Delete file if empty, otherwise write back
   const remaining = Object.keys(data).length;
   if (remaining === 0) {
-    unlinkSync(LOCK_PATH);
+    unlinkSync(getLockPath());
   } else {
     writeLockRaw(data);
   }

@@ -2,21 +2,28 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const CONFIG_DIR = join(homedir(), '.rnwt');
-const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
+export function getConfigDir() {
+  return process.env.RNWT_HOME || join(homedir(), '.rnwt');
+}
+
+function getConfigPath() {
+  return join(getConfigDir(), 'config.json');
+}
 
 function ensureDir() {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  const dir = getConfigDir();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
 }
 
 export function loadConfig() {
   ensureDir();
-  if (!existsSync(CONFIG_PATH)) {
+  const configPath = getConfigPath();
+  if (!existsSync(configPath)) {
     return null;
   }
-  const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+  const config = JSON.parse(readFileSync(configPath, 'utf-8'));
 
   // Migrate old format: { bundleId, platform, worktrees, nextPort }
   // → new format: { apps: { [bundleId]: { platforms: [platform], worktrees } } }
@@ -41,7 +48,7 @@ export function loadConfig() {
 
 export function saveConfig(config) {
   ensureDir();
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
+  writeFileSync(getConfigPath(), JSON.stringify(config, null, 2) + '\n');
 }
 
 export function getApp(config, bundleId) {
@@ -128,4 +135,3 @@ export function getWorktree(bundleId, name) {
   return config.apps[bundleId].worktrees[name];
 }
 
-export { CONFIG_DIR };

@@ -16,10 +16,14 @@ Each worktree runs its own Metro server on a unique port. Only one can use the d
 npm install -g react-native-worktree
 ```
 
-Install the Claude Code skill so agents know how to use it:
+Install the skill so agents know how to use it:
 
 ```bash
+# Claude Code
 mkdir -p ~/.claude/skills/react-native-worktree && curl -fsSL https://raw.githubusercontent.com/aleqsio/react-native-worktree/main/skill/SKILL.md -o ~/.claude/skills/react-native-worktree/SKILL.md
+
+# Codex
+mkdir -p ~/.agents/skills/react-native-worktree && curl -fsSL https://raw.githubusercontent.com/aleqsio/react-native-worktree/main/skill/SKILL.md -o ~/.agents/skills/react-native-worktree/SKILL.md
 ```
 
 # Quick Start

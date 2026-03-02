@@ -5,6 +5,9 @@
   "bin": {
     "react-native-worktree": "./bin/cli.js"
   },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "chalk": "^5.4.1",
     "commander": "^13.1.0"
