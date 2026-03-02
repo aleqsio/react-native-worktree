@@ -11,13 +11,13 @@ export default function switchCommand(program) {
     .action(async (name, opts) => {
       const config = loadConfig();
       if (!config) {
-        console.error(chalk.red('Not initialized. Run `worktree-rn init` first.'));
+        console.error(chalk.red('Not initialized. Run `rnwt init` first.'));
         process.exit(1);
       }
 
       const wt = getWorktree(name);
       if (!wt) {
-        console.error(chalk.red(`Worktree '${name}' not found. Run \`worktree-rn add ${name}\` first.`));
+        console.error(chalk.red(`Worktree '${name}' not found. Run \`rnwt add ${name}\` first.`));
         process.exit(1);
       }
 

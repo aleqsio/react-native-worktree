@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const CONFIG_DIR = join(homedir(), '.worktree-rn');
+const CONFIG_DIR = join(homedir(), '.rnwt');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 
 function ensureDir() {
@@ -27,7 +27,7 @@ export function saveConfig(config) {
 export function addWorktree(name, path, port) {
   const config = loadConfig();
   if (!config) {
-    throw new Error('Not initialized. Run `worktree-rn init` first.');
+    throw new Error('Not initialized. Run `rnwt init` first.');
   }
   if (!port) {
     port = config.nextPort || 8082;

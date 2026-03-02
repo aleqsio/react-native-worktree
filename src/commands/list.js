@@ -10,7 +10,7 @@ export default function listCommand(program) {
     .action(async () => {
       const config = loadConfig();
       if (!config) {
-        console.error(chalk.red('Not initialized. Run `worktree-rn init` first.'));
+        console.error(chalk.red('Not initialized. Run `rnwt init` first.'));
         process.exit(1);
       }
 
@@ -18,7 +18,7 @@ export default function listCommand(program) {
       const names = Object.keys(worktrees);
 
       if (names.length === 0) {
-        console.log(chalk.dim('No worktrees registered. Run `worktree-rn add <name>` to add one.'));
+        console.log(chalk.dim('No worktrees registered. Run `rnwt add <name>` to add one.'));
         return;
       }
 

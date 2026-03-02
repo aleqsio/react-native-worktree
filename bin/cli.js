@@ -11,7 +11,7 @@ import listCommand from '../src/commands/list.js';
 const program = new Command();
 
 program
-  .name('worktree-rn')
+  .name('rnwt')
   .description('Metro port switcher with mutex for multi-agent RN development')
   .version('1.0.0');
 

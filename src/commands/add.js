@@ -11,7 +11,7 @@ export default function addCommand(program) {
     .action((name, opts) => {
       const config = loadConfig();
       if (!config) {
-        console.error(chalk.red('Not initialized. Run `worktree-rn init` first.'));
+        console.error(chalk.red('Not initialized. Run `rnwt init` first.'));
         process.exit(1);
       }
 

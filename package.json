@@ -1,9 +1,9 @@
 {
-  "name": "worktree-rn",
+  "name": "react-native-worktree",
   "version": "1.0.0",
   "description": "Metro port switcher with mutex for multi-agent React Native development",
   "bin": {
-    "worktree-rn": "./bin/cli.js"
+    "rnwt": "./bin/cli.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",
