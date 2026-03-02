@@ -11,7 +11,7 @@ import listCommand from '../src/commands/list.js';
 const program = new Command();
 
 program
-  .name('rnwt')
+  .name('react-native-worktree')
   .description('Metro port switcher with mutex for multi-agent RN development')
   .version('1.0.0');
 

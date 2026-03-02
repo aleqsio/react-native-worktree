@@ -12,23 +12,46 @@ npm install -g react-native-worktree
 
 ## Quick Start
 
+### 1. Initialize (once, in your Expo project)
+
 ```bash
-# In your Expo project directory
-rnwt init                          # auto-detects bundle ID from app.json
-rnwt add main --port 8081          # register the main project
-
-# Create a worktree and register it
-git worktree add ../feat-auth -b feat-auth
-rnwt add feat-auth --path ../feat-auth    # auto-assigns port 8082
-
-# Start Metro in the worktree
-cd ../feat-auth && npx expo start --port 8082
-
-# Switch the device to the worktree
-rnwt switch feat-auth              # acquires lock, restarts app on port 8082
-rnwt switch feat-auth              # heartbeat (refreshes lock, no restart)
-rnwt release                       # done, release for others
+cd my-expo-app
+react-native-worktree init                    # auto-detects bundle ID from app.json
+react-native-worktree add main --port 8081    # register the main project
 ```
+
+### 2. Install the Claude Code skill
+
+Copy `skill/SKILL.md` into your Claude Code skills directory:
+
+```bash
+mkdir -p ~/.claude/skills/react-native-worktree
+cp skill/SKILL.md ~/.claude/skills/react-native-worktree/SKILL.md
+```
+
+This teaches agents how to create worktrees, register them, manage the mutex, and exclude native directories for faster setup.
+
+### 3. Tell agents to use it
+
+Start multiple Claude Code sessions. Each agent works in a worktree:
+
+```
+> Add a user authentication feature, use react-native-worktree
+```
+
+The agent will (guided by the skill):
+1. Create a git worktree and register it with an auto-assigned port
+2. Install dependencies and start Metro on that port
+3. Call `react-native-worktree switch` to acquire the device and preview
+4. Heartbeat while you test, then release when done
+
+Meanwhile, another agent in a separate session:
+
+```
+> Fix the navigation bug on the settings screen, use react-native-worktree
+```
+
+This agent creates its own worktree. When it needs the device, it calls `switch` — if the first agent still holds the lock, it waits automatically until the device is free.
 
 ## How It Works
 
@@ -63,40 +86,40 @@ The lock has a heartbeat/staleness model: each `switch` call updates a timestamp
 
 ## Commands
 
-### `rnwt init`
+### `react-native-worktree init`
 
 Initialize configuration. Auto-detects bundle ID from `app.json` / `app.config.js`.
 
 ```bash
-rnwt init                          # auto-detect
-rnwt init --bundle-id com.myapp    # manual
-rnwt init --platform android       # default: ios
+react-native-worktree init                          # auto-detect
+react-native-worktree init --bundle-id com.myapp    # manual
+react-native-worktree init --platform android       # default: ios
 ```
 
-### `rnwt add <name>`
+### `react-native-worktree add <name>`
 
 Register a worktree. Port auto-increments from 8082.
 
 ```bash
-rnwt add feat-auth --path ../feat-auth
-rnwt add feat-auth --path ../feat-auth --port 9000
+react-native-worktree add feat-auth --path ../feat-auth
+react-native-worktree add feat-auth --path ../feat-auth --port 9000
 ```
 
-### `rnwt switch <name>`
+### `react-native-worktree switch <name>`
 
 Acquire the lock and switch the device to the worktree's Metro port.
 
 ```bash
-rnwt switch feat-auth              # acquire + switch + relaunch
-rnwt switch feat-auth              # heartbeat (same holder, no restart)
-rnwt switch feat-auth --timeout 60000  # custom stale timeout
+react-native-worktree switch feat-auth              # acquire + switch + relaunch
+react-native-worktree switch feat-auth              # heartbeat (same holder, no restart)
+react-native-worktree switch feat-auth --timeout 60000  # custom stale timeout
 ```
 
-### `rnwt release`
+### `react-native-worktree release`
 
 Release the lock so other agents can use the device.
 
-### `rnwt status`
+### `react-native-worktree status`
 
 Show who holds the lock and for how long.
 
@@ -104,7 +127,7 @@ Show who holds the lock and for how long.
 Runtime held by 'feat-auth' (port 8082), last active 5s ago
 ```
 
-### `rnwt list`
+### `react-native-worktree list`
 
 Show all registered worktrees with Metro running status.
 
@@ -115,24 +138,6 @@ main                8081    running
 feat-auth           8082    running   held
 fix-nav             8083    stopped
 ```
-
-## Multi-Agent Usage
-
-Designed for multiple Claude Code instances (or similar AI agents) working in parallel:
-
-```bash
-# Agent A (working on feat-auth):
-rnwt switch feat-auth          # acquires lock, app switches to feat-auth
-rnwt switch feat-auth          # heartbeat while user tests
-rnwt release                   # done
-
-# Agent B (working on fix-nav, while A holds the lock):
-rnwt switch fix-nav            # blocks: "Waiting for feat-auth to release..."
-                               # ...A releases...
-                               # lock acquired, app switches to fix-nav
-```
-
-If an agent crashes without releasing, the lock goes stale after 30s and the next agent takes over automatically.
 
 ## Config
 

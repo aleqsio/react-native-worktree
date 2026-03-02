@@ -82,6 +82,6 @@ export default function initCommand(program) {
         });
       }
 
-      console.log(chalk.green(`Initialized rnwt for ${chalk.bold(bundleId)} (${platform})`));
+      console.log(chalk.green(`Initialized react-native-worktree for ${chalk.bold(bundleId)} (${platform})`));
     });
 }

@@ -27,7 +27,7 @@ export function saveConfig(config) {
 export function addWorktree(name, path, port) {
   const config = loadConfig();
   if (!config) {
-    throw new Error('Not initialized. Run `rnwt init` first.');
+    throw new Error('Not initialized. Run `react-native-worktree init` first.');
   }
   if (!port) {
     port = config.nextPort || 8082;
