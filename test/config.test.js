@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -223,7 +223,7 @@ describe('config', () => {
 
     it('throws for uninitialized config', async () => {
       const { addWorktree } = await load();
-      assert.throws(() => addWorktree('com.test', 'x', '/tmp', 8082), /Not initialized/);
+      assert.throws(() => addWorktree('com.test', 'x', '/tmp', 8082), /No config found/);
     });
 
     it('throws for missing app', async () => {
@@ -255,6 +255,134 @@ describe('config', () => {
     it('returns null when no config exists', async () => {
       const { getWorktree } = await load();
       assert.equal(getWorktree('com.test', 'main'), null);
+    });
+  });
+
+  describe('ensureConfig', () => {
+    it('returns existing config when present', async () => {
+      const config = { apps: { 'com.test': { platforms: ['ios'], worktrees: {} } } };
+      writeFileSync(join(tmpDir, 'config.json'), JSON.stringify(config));
+      const { ensureConfig } = await load();
+      const result = ensureConfig();
+      assert.deepEqual(result, config);
+    });
+
+    it('creates empty config when none exists', async () => {
+      const { ensureConfig } = await load();
+      const result = ensureConfig();
+      assert.deepEqual(result, { apps: {} });
+      // Verify persisted
+      const onDisk = JSON.parse(readFileSync(join(tmpDir, 'config.json'), 'utf-8'));
+      assert.deepEqual(onDisk, { apps: {} });
+    });
+  });
+
+  describe('detectBundleId', () => {
+    it('detects iOS bundle ID from app.json', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        writeFileSync(join(tmpDir, 'app.json'), JSON.stringify({
+          expo: { ios: { bundleIdentifier: 'com.test.ios' } },
+        }));
+        const { detectBundleId } = await load();
+        assert.equal(detectBundleId('ios'), 'com.test.ios');
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+
+    it('detects Android package from app.json', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        writeFileSync(join(tmpDir, 'app.json'), JSON.stringify({
+          expo: { android: { package: 'com.test.android' } },
+        }));
+        const { detectBundleId } = await load();
+        assert.equal(detectBundleId('android'), 'com.test.android');
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+
+    it('returns null when no config files exist', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        const { detectBundleId } = await load();
+        assert.equal(detectBundleId('ios'), null);
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+  });
+
+  describe('ensureApp', () => {
+    it('returns existing single app', async () => {
+      const { ensureApp } = await load();
+      const config = { apps: { 'com.test': { platforms: ['ios'], worktrees: {} } } };
+      const result = ensureApp(config);
+      assert.equal(result.bundleId, 'com.test');
+    });
+
+    it('returns explicit bundleId when it exists', async () => {
+      const { ensureApp } = await load();
+      const config = { apps: { 'com.a': {}, 'com.b': {} } };
+      const result = ensureApp(config, 'com.b');
+      assert.equal(result.bundleId, 'com.b');
+    });
+
+    it('returns null for explicit bundleId that does not exist', async () => {
+      const { ensureApp } = await load();
+      const config = { apps: { 'com.a': {} } };
+      const result = ensureApp(config, 'com.missing');
+      assert.equal(result.bundleId, null);
+    });
+
+    it('auto-detects and creates app when no apps exist', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        writeFileSync(join(tmpDir, 'app.json'), JSON.stringify({
+          expo: { ios: { bundleIdentifier: 'com.new.app' } },
+        }));
+        writeFileSync(join(tmpDir, 'config.json'), JSON.stringify({ apps: {} }));
+        const { ensureApp } = await load();
+        const config = { apps: {} };
+        const result = ensureApp(config);
+        assert.equal(result.bundleId, 'com.new.app');
+        assert.ok(result.config.apps['com.new.app']);
+        assert.deepEqual(result.config.apps['com.new.app'].platforms, ['ios']);
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+
+    it('returns null when no apps and no detection possible', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        const { ensureApp } = await load();
+        const config = { apps: {} };
+        const result = ensureApp(config);
+        assert.equal(result.bundleId, null);
+      } finally {
+        process.chdir(origCwd);
+      }
+    });
+
+    it('returns null for multiple apps without explicit bundleId', async () => {
+      const origCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        const { ensureApp } = await load();
+        const config = { apps: { 'com.a': {}, 'com.b': {} } };
+        const result = ensureApp(config);
+        assert.equal(result.bundleId, null);
+      } finally {
+        process.chdir(origCwd);
+      }
     });
   });
 });

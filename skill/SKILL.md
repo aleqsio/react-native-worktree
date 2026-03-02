@@ -47,16 +47,9 @@ npm install   # or: yarn / bun install
 
 ## Registering and Using react-native-worktree
 
-### First-time setup (once per machine, from any Expo project dir)
-
-```bash
-cd /path/to/main/project
-react-native-worktree init                                 # auto-detects bundleId, default platform: ios
-react-native-worktree init --platforms ios,android          # both platforms
-react-native-worktree add main --port 8081                 # register the main project
-```
-
 ### Registering your worktree
+
+On first run, `add` auto-detects the bundle ID and platforms from `app.json` / `app.config.js` and creates the config automatically. No separate init step needed.
 
 ```bash
 react-native-worktree add my-feature --path /path/to/my-feature
@@ -64,10 +57,23 @@ react-native-worktree add my-feature --path /path/to/my-feature
 # Output: Start Metro: cd /path/to/my-feature && npx expo start --port 8083
 ```
 
-The port is auto-assigned. If a previously registered worktree's Metro is dead, its port is reused automatically. Start Metro on the assigned port:
+The port is auto-assigned. If a previously registered worktree's Metro is dead, its port is reclaimed and the stale worktree entry is removed from config.
+
+**IMPORTANT: Start Metro immediately after `add`, before registering any other worktrees.** Port reclamation detects dead Metro servers — if you register multiple worktrees without starting Metro, they may all get the same port. Always do `add` then `start` sequentially for each worktree:
 
 ```bash
+react-native-worktree add my-feature --path /path/to/my-feature
 cd /path/to/my-feature
+npx expo start --port 8083    # start BEFORE adding the next worktree
+```
+
+**If Metro reports "port busy"**, re-run `add` with the same worktree name — it will reassign a new available port:
+
+```bash
+react-native-worktree add my-feature --path /path/to/my-feature
+# got port 8082, but Metro says it's busy:
+# Error: port 8082 already in use
+react-native-worktree add my-feature --path /path/to/my-feature   # re-add → gets port 8083
 npx expo start --port 8083
 ```
 
@@ -131,17 +137,15 @@ react-native-worktree list --app com.myapp       # filter by app
 ## Typical Agent Workflow
 
 ```bash
-# 1. Create worktree and set up
+# 1. Create worktree, register, and start Metro (do these sequentially — don't add another worktree until Metro is running)
 git worktree add ../feat-auth -b feat-auth
 cd ../feat-auth
 npm install
 react-native-worktree add feat-auth --path $(pwd)
-# note the assigned port from output (may reuse a dead port)
+# note the assigned port from output
+npx expo start --port <assigned-port>   # start Metro IMMEDIATELY after add
 
-# 2. Start Metro on your assigned port
-npx expo start --port <assigned-port>
-
-# 3. When you need the device to preview your work
+# 2. When you need the device to preview your work
 react-native-worktree switch feat-auth --platform ios
 # device restarts connected to your Metro
 
@@ -171,6 +175,11 @@ If you do not hold the lock, another agent may switch the device out from under 
 
 ## Important Rules
 
+- **Never use Expo Go.** Always build and use the actual development client with the correct bundle ID. Expo Go does not support `RCT_jsLocation` switching or custom native modules. Only use Expo Go if the user explicitly asks for it.
+- **Build and install the app if needed.** If the app is not already installed on the simulator/emulator, build and install it first:
+  - **iOS:** `npx expo run:ios` (builds with the correct bundle ID and installs on the simulator)
+  - **Android:** `npx expo run:android` (builds with the correct package name and installs on the emulator)
+  - Only one worktree needs to build — the binary is shared across all worktrees since only the Metro port changes.
 - **Lock before touching the device.** Every `xcrun simctl`, `adb`, screenshot, or log read requires you to hold the lock for that platform. No exceptions.
 - **Always release the lock** when you're done with the device. Don't hog it.
 - **Start Metro before switching.** `react-native-worktree switch` warns if Metro isn't running on your port, but it still acquires the lock.

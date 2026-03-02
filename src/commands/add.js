@@ -1,19 +1,22 @@
-import { addWorktree, loadConfig, resolveApp, getAllPorts, computeNextPort } from '../config.js';
+import { addWorktree, ensureConfig, ensureApp, saveConfig, getAllPorts, computeNextPort } from '../config.js';
 import { isMetroRunning } from '../switcher.js';
 import chalk from 'chalk';
 import { resolve } from 'path';
 
-async function findReusablePort(config) {
-  const ports = getAllPorts(config);
-  if (ports.length === 0) return null;
-
-  // Build port→worktree name map for logging
+async function findReusablePort(config, excludeName) {
+  const ports = [];
   const portOwners = {};
   for (const [appId, app] of Object.entries(config.apps || {})) {
     for (const [name, wt] of Object.entries(app.worktrees || {})) {
-      portOwners[wt.port] = { name, app: appId };
+      // Skip the worktree being (re-)added — don't reclaim our own port
+      if (name === excludeName) continue;
+      if (wt.port) {
+        ports.push(wt.port);
+        portOwners[wt.port] = { name, app: appId };
+      }
     }
   }
+  if (ports.length === 0) return null;
 
   // Probe each port
   const results = await Promise.all(
@@ -29,6 +32,14 @@ async function findReusablePort(config) {
   return dead || null;
 }
 
+function removeWorktreeEntry(config, appId, name) {
+  const app = config.apps[appId];
+  if (app?.worktrees?.[name]) {
+    delete app.worktrees[name];
+    saveConfig(config);
+  }
+}
+
 export default function addCommand(program) {
   program
     .command('add <name>')
@@ -37,18 +48,16 @@ export default function addCommand(program) {
     .option('--port <port>', 'Metro port number')
     .option('--app <bundleId>', 'App bundle identifier (auto-detected if one app)')
     .action(async (name, opts) => {
-      const config = loadConfig();
-      if (!config) {
-        console.error(chalk.red('Not initialized. Run `react-native-worktree init` first.'));
-        process.exit(1);
-      }
+      const config = ensureConfig();
 
-      const bundleId = resolveApp(config, opts.app);
+      const { config: updatedConfig, bundleId } = ensureApp(config, opts.app);
       if (!bundleId) {
         if (opts.app) {
           console.error(chalk.red(`App '${opts.app}' not found in config.`));
-        } else {
+        } else if (Object.keys(updatedConfig.apps).length > 1) {
           console.error(chalk.red('Multiple apps configured. Use --app <bundleId> to specify which one.'));
+        } else {
+          console.error(chalk.red('Could not auto-detect bundle ID. Use --app <bundleId> or run from a directory with app.json.'));
         }
         process.exit(1);
       }
@@ -56,13 +65,15 @@ export default function addCommand(program) {
       let port = opts.port ? parseInt(opts.port, 10) : undefined;
 
       if (!port) {
-        // Try port reclamation
-        const dead = await findReusablePort(config);
+        // Try port reclamation (excludes the worktree being added to avoid self-reclaim)
+        const dead = await findReusablePort(updatedConfig, name);
         if (dead) {
           port = dead.port;
-          console.log(chalk.dim(`Reusing port ${port} (Metro stopped for '${dead.owner.name}')`));
+          // Remove the old worktree entry that owned this port
+          removeWorktreeEntry(updatedConfig, dead.owner.app, dead.owner.name);
+          console.log(chalk.dim(`Reusing port ${port} (removed stale worktree '${dead.owner.name}')`));
         } else {
-          port = computeNextPort(config);
+          port = computeNextPort(updatedConfig);
         }
       }
 

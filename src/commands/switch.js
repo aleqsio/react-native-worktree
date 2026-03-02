@@ -1,4 +1,4 @@
-import { loadConfig, getWorktree, resolveApp, getApp, getPackageName } from '../config.js';
+import { ensureConfig, getWorktree, resolveApp, getApp, getPackageName } from '../config.js';
 import { waitForLock } from '../lock.js';
 import { switchPort, isMetroRunning } from '../switcher.js';
 import chalk from 'chalk';
@@ -11,16 +11,14 @@ export default function switchCommand(program) {
     .option('--app <bundleId>', 'App bundle identifier (auto-detected if one app)')
     .option('--platform <platform>', 'Target platform (ios or android)')
     .action(async (name, opts) => {
-      const config = loadConfig();
-      if (!config) {
-        console.error(chalk.red('Not initialized. Run `react-native-worktree init` first.'));
-        process.exit(1);
-      }
+      const config = ensureConfig();
 
       const bundleId = resolveApp(config, opts.app);
       if (!bundleId) {
         if (opts.app) {
           console.error(chalk.red(`App '${opts.app}' not found in config.`));
+        } else if (Object.keys(config.apps).length === 0) {
+          console.error(chalk.red('No apps configured. Run `react-native-worktree add <name>` first.'));
         } else {
           console.error(chalk.red('Multiple apps configured. Use --app <bundleId> to specify which one.'));
         }

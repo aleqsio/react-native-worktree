@@ -40,6 +40,14 @@ function readLock() {
   return JSON.parse(readFileSync(p, 'utf-8'));
 }
 
+function writeAppJson(dir, expo) {
+  writeFileSync(join(dir, 'app.json'), JSON.stringify({ expo }));
+}
+
+function seedConfig(apps) {
+  writeFileSync(join(tmpDir, 'config.json'), JSON.stringify({ apps }));
+}
+
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'rnwt-cli-test-'));
 });
@@ -49,133 +57,34 @@ afterEach(() => {
 });
 
 describe('CLI', () => {
-  describe('init', () => {
-    it('initializes with explicit bundle id', () => {
-      const { stdout, exitCode } = run(['init', '--bundle-id', 'com.test.app']);
+  describe('add', () => {
+    it('auto-detects app from app.json on first run', () => {
+      writeAppJson(tmpDir, { ios: { bundleIdentifier: 'com.detected' } });
+      const { exitCode, stdout } = run(['add', 'feat-a', '--path', '/tmp/feat-a', '--port', '9001'], { cwd: tmpDir });
       assert.equal(exitCode, 0);
-      assert.ok(stdout.includes('com.test.app'));
+      assert.ok(stdout.includes('feat-a'));
+      assert.ok(stdout.includes('9001'));
 
       const config = readConfig();
-      assert.ok(config.apps['com.test.app']);
-      assert.deepEqual(config.apps['com.test.app'].platforms, ['ios']);
+      assert.ok(config.apps['com.detected']);
+      assert.equal(config.apps['com.detected'].worktrees['feat-a'].port, 9001);
     });
 
-    it('initializes with multiple platforms', () => {
-      const { exitCode } = run(['init', '--bundle-id', 'com.test', '--platforms', 'ios,android']);
+    it('auto-detects both platforms from app.json', () => {
+      writeAppJson(tmpDir, {
+        ios: { bundleIdentifier: 'com.test.my-app' },
+        android: { package: 'com.test.myapp' },
+      });
+      const { exitCode } = run(['add', 'feat-a', '--path', '/tmp/feat-a', '--port', '9001'], { cwd: tmpDir });
       assert.equal(exitCode, 0);
-
-      const config = readConfig();
-      assert.deepEqual(config.apps['com.test'].platforms, ['ios', 'android']);
-    });
-
-    it('rejects invalid platform', () => {
-      const { exitCode, stderr } = run(['init', '--bundle-id', 'com.test', '--platforms', 'windows']);
-      assert.notEqual(exitCode, 0);
-      assert.ok(stderr.includes('Invalid platform'));
-    });
-
-    it('auto-detects bundle ID from app.json (ios only)', () => {
-      writeFileSync(
-        join(tmpDir, 'app.json'),
-        JSON.stringify({ expo: { ios: { bundleIdentifier: 'com.detected' } } })
-      );
-      const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
-      assert.equal(exitCode, 0);
-      assert.ok(stdout.includes('com.detected'));
-
-      const config = readConfig();
-      assert.deepEqual(config.apps['com.detected'].platforms, ['ios']);
-    });
-
-    it('auto-detects bundle ID from app.json (android only)', () => {
-      writeFileSync(
-        join(tmpDir, 'app.json'),
-        JSON.stringify({ expo: { android: { package: 'com.detected.android' } } })
-      );
-      const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
-      assert.equal(exitCode, 0);
-      assert.ok(stdout.includes('com.detected.android'));
-
-      const config = readConfig();
-      assert.deepEqual(config.apps['com.detected.android'].platforms, ['android']);
-    });
-
-    it('auto-detects both platforms when both defined in app.json', () => {
-      writeFileSync(
-        join(tmpDir, 'app.json'),
-        JSON.stringify({
-          expo: {
-            ios: { bundleIdentifier: 'com.test.my-app' },
-            android: { package: 'com.test.myapp' },
-          },
-        })
-      );
-      const { exitCode, stdout } = run(['init'], { cwd: tmpDir });
-      assert.equal(exitCode, 0);
-      assert.ok(stdout.includes('com.test.my-app'));
 
       const config = readConfig();
       assert.deepEqual(config.apps['com.test.my-app'].platforms, ['ios', 'android']);
       assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.myapp');
     });
 
-    it('fails when no bundle ID can be detected', () => {
-      const { exitCode, stderr } = run(['init']);
-      assert.notEqual(exitCode, 0);
-      assert.ok(stderr.includes('Could not auto-detect'));
-    });
-
-    it('detects differing android package from app.json', () => {
-      writeFileSync(
-        join(tmpDir, 'app.json'),
-        JSON.stringify({
-          expo: {
-            ios: { bundleIdentifier: 'com.test.my-app' },
-            android: { package: 'com.test.myapp' },
-          },
-        })
-      );
-      const { exitCode, stdout } = run(['init', '--platforms', 'ios,android'], { cwd: tmpDir });
-      assert.equal(exitCode, 0);
-      assert.ok(stdout.includes('com.test.my-app'));
-
-      const config = readConfig();
-      assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.myapp');
-    });
-
-    it('omits androidPackage when it matches bundleId', () => {
-      writeFileSync(
-        join(tmpDir, 'app.json'),
-        JSON.stringify({
-          expo: {
-            ios: { bundleIdentifier: 'com.test.app' },
-            android: { package: 'com.test.app' },
-          },
-        })
-      );
-      const { exitCode } = run(['init', '--platforms', 'ios,android'], { cwd: tmpDir });
-      assert.equal(exitCode, 0);
-
-      const config = readConfig();
-      assert.equal(config.apps['com.test.app'].androidPackage, undefined);
-    });
-
-    it('stores --android-package override', () => {
-      const { exitCode } = run([
-        'init', '--bundle-id', 'com.test.my-app',
-        '--platforms', 'ios,android',
-        '--android-package', 'com.test.custom',
-      ]);
-      assert.equal(exitCode, 0);
-
-      const config = readConfig();
-      assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.custom');
-    });
-  });
-
-  describe('add', () => {
-    it('adds a worktree with explicit port', () => {
-      run(['init', '--bundle-id', 'com.test']);
+    it('adds a worktree with explicit port to existing app', () => {
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       const { exitCode, stdout } = run(['add', 'feat-a', '--path', '/tmp/feat-a', '--port', '9001']);
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes('feat-a'));
@@ -186,7 +95,7 @@ describe('CLI', () => {
     });
 
     it('auto-assigns port', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       const { exitCode } = run(['add', 'feat-b', '--path', '/tmp/feat-b']);
       assert.equal(exitCode, 0);
 
@@ -195,7 +104,7 @@ describe('CLI', () => {
     });
 
     it('registers multiple worktrees with explicit ports', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       run(['add', 'w1', '--path', '/tmp/w1', '--port', '8081']);
       run(['add', 'w2', '--path', '/tmp/w2', '--port', '8082']);
 
@@ -204,16 +113,48 @@ describe('CLI', () => {
       assert.equal(config.apps['com.test'].worktrees['w2'].port, 8082);
     });
 
-    it('fails without init', () => {
+    it('re-add with same name reassigns a new port', () => {
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
+      run(['add', 'feat-a', '--path', '/tmp/feat-a']);
+      const config1 = readConfig();
+      const port1 = config1.apps['com.test'].worktrees['feat-a'].port;
+
+      // Re-add same worktree name — should get a different port
+      run(['add', 'feat-a', '--path', '/tmp/feat-a']);
+      const config2 = readConfig();
+      const port2 = config2.apps['com.test'].worktrees['feat-a'].port;
+
+      assert.notEqual(port1, port2);
+    });
+
+    it('port reclamation removes stale worktree entry', () => {
+      // Use a high port that's almost certainly not in use
+      seedConfig({
+        'com.test': {
+          platforms: ['ios'],
+          worktrees: { 'old-wt': { path: '/tmp/old', port: 59123 } },
+        },
+      });
+
+      // Add a new worktree — should reclaim port 59123 and remove old-wt
+      const { exitCode, stdout } = run(['add', 'new-wt', '--path', '/tmp/new']);
+      assert.equal(exitCode, 0);
+
+      const config = readConfig();
+      assert.equal(config.apps['com.test'].worktrees['new-wt'].port, 59123);
+      assert.equal(config.apps['com.test'].worktrees['old-wt'], undefined);
+    });
+
+    it('fails when no app can be detected and no apps configured', () => {
       const { exitCode, stderr } = run(['add', 'feat-x', '--path', '/tmp']);
       assert.notEqual(exitCode, 0);
-      assert.ok(stderr.includes('Not initialized'));
+      assert.ok(stderr.includes('Could not auto-detect'));
     });
   });
 
   describe('release', () => {
     it('releases existing lock', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       // Manually write a lock
       writeFileSync(
         join(tmpDir, 'lock.json'),
@@ -229,7 +170,7 @@ describe('CLI', () => {
     });
 
     it('reports no lock held', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       const { exitCode, stdout } = run(['release']);
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes('No lock'));
@@ -238,14 +179,14 @@ describe('CLI', () => {
 
   describe('status', () => {
     it('reports no lock held', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       const { exitCode, stdout } = run(['status']);
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes('No worktree'));
     });
 
     it('shows lock holder', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       run(['add', 'feat-a', '--path', '/tmp', '--port', '8082']);
       writeFileSync(
         join(tmpDir, 'lock.json'),
@@ -263,7 +204,7 @@ describe('CLI', () => {
 
   describe('list', () => {
     it('shows registered worktrees', () => {
-      run(['init', '--bundle-id', 'com.test']);
+      seedConfig({ 'com.test': { platforms: ['ios'], worktrees: {} } });
       run(['add', 'main', '--path', '/tmp/main', '--port', '8081']);
       run(['add', 'feat-a', '--path', '/tmp/feat-a', '--port', '8082']);
 
@@ -276,23 +217,37 @@ describe('CLI', () => {
       assert.ok(stdout.includes('8082'));
     });
 
-    it('fails without init', () => {
-      const { exitCode, stderr } = run(['list']);
+    it('shows empty message when no apps configured', () => {
+      const { exitCode, stdout } = run(['list']);
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('No apps configured'));
+    });
+  });
+
+  describe('switch', () => {
+    it('shows error when no apps configured', () => {
+      const { exitCode, stderr } = run(['switch', 'feat-x']);
       assert.notEqual(exitCode, 0);
-      assert.ok(stderr.includes('Not initialized'));
+      assert.ok(stderr.includes('No apps configured'));
     });
   });
 
   describe('full flow', () => {
-    it('init → add → list → status → release', () => {
-      // Init
-      let result = run(['init', '--bundle-id', 'com.flow', '--platforms', 'ios,android']);
+    it('add (auto-detect) → add more → list → status → release', () => {
+      writeAppJson(tmpDir, {
+        ios: { bundleIdentifier: 'com.flow' },
+        android: { package: 'com.flow' },
+      });
+
+      // Add worktrees (first add auto-creates app)
+      let result = run(['add', 'main', '--path', '/tmp/main', '--port', '8081'], { cwd: tmpDir });
       assert.equal(result.exitCode, 0);
 
-      // Add worktrees
-      run(['add', 'main', '--path', '/tmp/main', '--port', '8081']);
-      run(['add', 'feature', '--path', '/tmp/feature', '--port', '8082']);
+      result = run(['add', 'feature', '--path', '/tmp/feature', '--port', '8082']);
+      assert.equal(result.exitCode, 0);
+
       const config = readConfig();
+      assert.ok(config.apps['com.flow']);
       assert.equal(config.apps['com.flow'].worktrees['feature'].port, 8082);
 
       // List shows both

@@ -1,4 +1,4 @@
-import { loadConfig } from '../config.js';
+import { ensureConfig } from '../config.js';
 import { getStatus } from '../lock.js';
 import { isMetroRunning } from '../switcher.js';
 import chalk from 'chalk';
@@ -9,10 +9,11 @@ export default function listCommand(program) {
     .description('List all registered worktrees with Metro status')
     .option('--app <bundleId>', 'Filter by app bundle identifier')
     .action(async (opts) => {
-      const config = loadConfig();
-      if (!config || !config.apps) {
-        console.error(chalk.red('Not initialized. Run `react-native-worktree init` first.'));
-        process.exit(1);
+      const config = ensureConfig();
+
+      if (Object.keys(config.apps).length === 0) {
+        console.log(chalk.dim('No apps configured. Run `react-native-worktree add <name>` to get started.'));
+        return;
       }
 
       const allLocks = getStatus();

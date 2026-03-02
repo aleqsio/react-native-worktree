@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import initCommand from '../src/commands/init.js';
 import addCommand from '../src/commands/add.js';
 import switchCommand from '../src/commands/switch.js';
 import releaseCommand from '../src/commands/release.js';
@@ -13,9 +12,8 @@ const program = new Command();
 program
   .name('react-native-worktree')
   .description('Metro port switcher with mutex for multi-agent RN development')
-  .version('1.0.0');
+  .version('1.1.0');
 
-initCommand(program);
 addCommand(program);
 switchCommand(program);
 releaseCommand(program);

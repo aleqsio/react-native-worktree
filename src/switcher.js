@@ -30,7 +30,11 @@ function switchIOS(bundleId, port) {
 }
 
 function switchAndroid(packageName, port) {
-  run(`adb reverse tcp:8081 tcp:${port}`);
+  // Write debug_http_host to default SharedPreferences (<package>_preferences.xml)
+  const prefsFile = `/data/data/${packageName}/shared_prefs/${packageName}_preferences.xml`;
+  const xml = `<?xml version=\\"1.0\\" encoding=\\"utf-8\\"?><map><string name=\\"debug_http_host\\">localhost:${port}</string></map>`;
+  run(`adb shell "echo '${xml}' | run-as ${packageName} sh -c 'cat > ${prefsFile}'"`);
+  run(`adb reverse tcp:${port} tcp:${port}`);
   runQuiet(`adb shell am force-stop ${packageName}`);
   run(`adb shell monkey -p ${packageName} -c android.intent.category.LAUNCHER 1`);
 }

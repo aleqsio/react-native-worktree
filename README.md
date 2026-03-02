@@ -35,11 +35,10 @@ Start multiple Claude Code sessions. Each agent works in a worktree:
 ```
 
 The agent will (guided by the skill):
-1. Initialize the tool if needed (auto-detects bundle ID and platform)
-2. Create a git worktree and register it with an auto-assigned port
-3. Install dependencies and start Metro on that port
-4. Call `react-native-worktree switch --platform ios` to acquire the device and preview
-5. Heartbeat while you test, then release when done
+1. Create a git worktree and register it with `add` (auto-detects bundle ID and platform on first run)
+2. Install dependencies and start Metro on the assigned port
+3. Call `react-native-worktree switch --platform ios` to acquire the device and preview
+4. Heartbeat while you test, then release when done
 
 Meanwhile, another agent in a separate session:
 
@@ -61,10 +60,11 @@ xcrun simctl terminate booted <bundleId>
 xcrun simctl launch booted <bundleId>
 ```
 
-**Android Emulator** — remaps the default Metro port via `adb reverse`, then force-stops and relaunches:
+**Android Emulator** — writes `debug_http_host` to the app's default SharedPreferences, sets up `adb reverse` for the actual port, then force-stops and relaunches:
 
 ```
-adb reverse tcp:8081 tcp:<port>
+echo '...localhost:<port>...' | adb shell run-as <packageName> sh -c 'cat > .../<packageName>_preferences.xml'
+adb reverse tcp:<port> tcp:<port>
 adb shell am force-stop <packageName>
 adb shell monkey -p <packageName> -c android.intent.category.LAUNCHER 1
 ```
@@ -86,19 +86,9 @@ When adding a worktree without `--port`, the tool probes all existing ports for 
 
 ## Commands
 
-### `react-native-worktree init`
-
-Initialize configuration. Auto-detects bundle ID from `app.json` / `app.config.js`.
-
-```bash
-react-native-worktree init                                  # auto-detect, ios only
-react-native-worktree init --bundle-id com.myapp             # manual bundle ID
-react-native-worktree init --platforms ios,android            # both platforms
-```
-
 ### `react-native-worktree add <name>`
 
-Register a worktree. Port auto-assigned (reuses dead ports, or increments from max).
+Register a worktree. On first run, auto-detects bundle ID and platforms from `app.json` / `app.config.js` and creates the config. Port auto-assigned (reuses dead ports, or increments from max).
 
 ```bash
 react-native-worktree add feat-auth --path ../feat-auth
