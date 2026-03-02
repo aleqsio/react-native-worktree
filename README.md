@@ -1,10 +1,15 @@
+<img width="1440" height="505" alt="Header" src="https://github.com/user-attachments/assets/5df1e644-96f0-4822-a279-5dbb1fbd5f96" />
+
 # react-native-worktree
 
-Metro port switcher with mutex for multi-agent React Native development.
+A mutex tool for react-native/Expo that allows multiple agents to write code at the same time in worktrees.
+They can then use simulator/emulator to test and the tool queues them up automatically.
 
-Multiple AI agents (or developers) work on different git worktrees of the same Expo app simultaneously. Each worktree runs its own Metro server on a unique port. Only one can use the device/simulator at a time **per platform**. This tool handles switching which Metro server the app connects to and coordinates access via per-platform cooperative locks.
+# How it works
 
-## Install
+Each worktree runs its own Metro server on a unique port. Only one can use the device/simulator at a time **per platform**. This tool handles switching which Metro server the app connects to and coordinates access via per-platform cooperative locks.
+
+# Install
 
 ```bash
 npm install -g react-native-worktree
@@ -16,12 +21,12 @@ Install the Claude Code skill so agents know how to use it:
 mkdir -p ~/.claude/skills/react-native-worktree && curl -fsSL https://raw.githubusercontent.com/aleqsio/react-native-worktree/main/skill/SKILL.md -o ~/.claude/skills/react-native-worktree/SKILL.md
 ```
 
-## Quick Start
+# Quick Start
 
 Start multiple Claude Code sessions. Each agent works in a worktree:
 
 ```
-> Add a user authentication feature, use react-native-worktree
+> Add a user authentication feature, take screenshots on ios and android simulators, use react-native-worktree
 ```
 
 The agent will (guided by the skill):
@@ -34,12 +39,12 @@ The agent will (guided by the skill):
 Meanwhile, another agent in a separate session:
 
 ```
-> Fix the navigation bug on the settings screen, use react-native-worktree
+> Fix the navigation bug on the settings screen, take screenshots on ios and android simulators, use react-native-worktree
 ```
 
 This agent creates its own worktree. When it needs the device, it calls `switch` — if the first agent still holds the lock for that platform, it waits automatically until the device is free.
 
-## How It Works
+## Deep dive
 
 ### Port Switching
 
