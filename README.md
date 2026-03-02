@@ -1,10 +1,10 @@
-<img width="1440" height="505" alt="Header" src="https://github.com/user-attachments/assets/5df1e644-96f0-4822-a279-5dbb1fbd5f96" />
+<img width="1440" height="505" alt="Header" src="https://github.com/user-attachments/assets/de529ed8-ff8d-4387-b2f6-fb0770eee588" />
 
 # react-native-worktree
 
 A mutex tool for react-native/Expo that allows multiple agents to write code at the same time in worktrees.
 
-They can then use simulator/emulator to test and the tool queues them up automatically.
+They can then use the ios simulator or the android emulator to test and the tool queues them up automatically.
 
 # How it works
 
