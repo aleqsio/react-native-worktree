@@ -49,7 +49,7 @@ Meanwhile, another agent in a separate session:
 
 This agent creates its own worktree. When it needs the device, it calls `switch` — if the first agent still holds the lock for that platform, it waits automatically until the device is free.
 
-## Deep dive
+## Deep dive (you probably don't need to read it)
 
 ### Port Switching
 
