@@ -10,29 +10,13 @@ Multiple AI agents (or developers) work on different git worktrees of the same E
 npm install -g react-native-worktree
 ```
 
+Install the Claude Code skill so agents know how to use it:
+
+```bash
+mkdir -p ~/.claude/skills/react-native-worktree && curl -fsSL https://raw.githubusercontent.com/aleqsio/react-native-worktree/main/skill/SKILL.md -o ~/.claude/skills/react-native-worktree/SKILL.md
+```
+
 ## Quick Start
-
-### 1. Initialize (once, in your Expo project)
-
-```bash
-cd my-expo-app
-react-native-worktree init                                 # auto-detects bundle ID, ios only
-react-native-worktree init --platforms ios,android          # both platforms
-react-native-worktree add main --port 8081                 # register the main project
-```
-
-### 2. Install the Claude Code skill
-
-Copy `skill/SKILL.md` into your Claude Code skills directory:
-
-```bash
-mkdir -p ~/.claude/skills/react-native-worktree
-cp skill/SKILL.md ~/.claude/skills/react-native-worktree/SKILL.md
-```
-
-This teaches agents how to create worktrees, register them, manage the mutex, and exclude native directories for faster setup.
-
-### 3. Tell agents to use it
 
 Start multiple Claude Code sessions. Each agent works in a worktree:
 
@@ -41,10 +25,11 @@ Start multiple Claude Code sessions. Each agent works in a worktree:
 ```
 
 The agent will (guided by the skill):
-1. Create a git worktree and register it with an auto-assigned port
-2. Install dependencies and start Metro on that port
-3. Call `react-native-worktree switch --platform ios` to acquire the device and preview
-4. Heartbeat while you test, then release when done
+1. Initialize the tool if needed (auto-detects bundle ID and platform)
+2. Create a git worktree and register it with an auto-assigned port
+3. Install dependencies and start Metro on that port
+4. Call `react-native-worktree switch --platform ios` to acquire the device and preview
+5. Heartbeat while you test, then release when done
 
 Meanwhile, another agent in a separate session:
 
