@@ -81,7 +81,7 @@ This does three things atomically:
 2. Reconfigures the device to connect to your Metro port
 3. Kills and relaunches the app
 
-If another agent holds the lock, the command blocks and prints `Waiting for 'other-agent' to release...` until the lock is freed or goes stale (default: 30s).
+If another agent holds the lock, the command blocks and prints `Waiting for 'other-agent' to release...` until the lock is freed or the holder's lock goes stale (default: 60s inactivity). The `--timeout` flag controls this **inactivity threshold** — how long a lock can sit without a heartbeat before another agent can reclaim it. It does NOT limit how long the waiting agent will poll. The waiting agent polls indefinitely until the lock becomes available.
 
 ### Heartbeat — keeping the lock alive
 
@@ -91,7 +91,7 @@ While you are actively using the device (user is testing, you're observing logs,
 react-native-worktree switch my-feature   # refreshes timestamp, no app restart
 ```
 
-This updates the lock timestamp so other agents know you're still active. If you stop calling, the lock goes stale after 30s and another agent can take over.
+This updates the lock timestamp so other agents know you're still active. If you stop calling, the lock goes stale after 60s and another agent can take over.
 
 ### Releasing the device
 
@@ -138,10 +138,25 @@ cd /path/to/main
 git worktree remove ../feat-auth
 ```
 
+## CRITICAL: Lock Before Any Device Operation
+
+**You MUST call `react-native-worktree switch <name>` and hold the lock BEFORE any operation that touches the simulator or emulator.** This includes:
+
+- Taking screenshots of the app
+- Reading simulator/emulator logs
+- Running `xcrun simctl` commands
+- Running `adb` commands against the device
+- Any UI testing or visual inspection
+- Launching or restarting the app
+
+If you do not hold the lock, another agent may switch the device out from under you at any moment, causing your operation to hit the wrong app state or fail entirely. **Always acquire first, then interact with the device.**
+
 ## Important Rules
 
+- **Lock before touching the device.** Every `xcrun simctl`, `adb`, screenshot, or log read requires you to hold the lock. No exceptions.
 - **Always release the lock** when you're done with the device. Don't hog it.
 - **Start Metro before switching.** `react-native-worktree switch` warns if Metro isn't running on your port, but it still acquires the lock.
 - **Don't force-take the lock.** If another agent holds it, wait. The mutex exists to prevent app thrashing.
-- **Heartbeat if holding long.** If you hold the lock for more than a few seconds, call `switch` again periodically to avoid stale timeout.
+- **Heartbeat if holding long.** If you hold the lock for more than a few seconds, call `switch` again periodically to avoid the inactivity timeout (default 60s).
 - **One port per worktree.** Don't change ports after registration. Other agents rely on the mapping.
+- **`--timeout` is the inactivity threshold**, not a wait limit. It controls how long a lock survives without heartbeats. The waiting agent polls forever until the lock is free.

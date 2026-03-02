@@ -82,7 +82,7 @@ File-based cooperative lock at `~/.rnwt/lock.json`. Two operations:
 - **`switch <name>`** — acquire the lock (or heartbeat if already held). If another agent holds it, blocks until released or stale.
 - **`release`** — free the lock immediately.
 
-The lock has a heartbeat/staleness model: each `switch` call updates a timestamp. If the holder stops calling (crashed, moved on), the timestamp goes stale after a timeout (default 30s) and another agent can take over.
+The lock has a heartbeat/staleness model: each `switch` call updates a timestamp. If the holder stops calling (crashed, moved on), the timestamp goes stale after the inactivity timeout (default 60s) and another agent can take over. The `--timeout` flag on `switch` controls this inactivity threshold — it's how long an idle lock is kept before another agent can reclaim it, not how long the waiting agent will poll.
 
 ## Commands
 
@@ -107,12 +107,12 @@ react-native-worktree add feat-auth --path ../feat-auth --port 9000
 
 ### `react-native-worktree switch <name>`
 
-Acquire the lock and switch the device to the worktree's Metro port.
+Acquire the lock and switch the device to the worktree's Metro port. The `--timeout` flag sets the **inactivity timeout** — how long a lock can sit without a heartbeat before it's considered stale and reclaimable by another agent. It does **not** limit how long this command will wait for a busy lock.
 
 ```bash
-react-native-worktree switch feat-auth              # acquire + switch + relaunch
-react-native-worktree switch feat-auth              # heartbeat (same holder, no restart)
-react-native-worktree switch feat-auth --timeout 60000  # custom stale timeout
+react-native-worktree switch feat-auth                  # acquire + switch + relaunch
+react-native-worktree switch feat-auth                  # heartbeat (same holder, no restart)
+react-native-worktree switch feat-auth --timeout 120000 # lock stays valid for 2min without heartbeat
 ```
 
 ### `react-native-worktree release`

@@ -7,7 +7,7 @@ export default function switchCommand(program) {
   program
     .command('switch <name>')
     .description('Acquire lock and switch the app to a worktree\'s Metro server')
-    .option('--timeout <ms>', 'Lock timeout in milliseconds', '30000')
+    .option('--timeout <ms>', 'Inactivity timeout — how long before a held lock is considered stale (ms)', '60000')
     .action(async (name, opts) => {
       const config = loadConfig();
       if (!config) {

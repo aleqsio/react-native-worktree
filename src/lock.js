@@ -32,7 +32,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function waitForLock(worktreeName, timeoutMs = 30000) {
+export async function waitForLock(worktreeName, timeoutMs = 60000) {
   while (true) {
     const lock = readLock();
 
