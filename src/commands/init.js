@@ -63,6 +63,7 @@ export default function initCommand(program) {
     .description('Initialize config with bundle ID and platforms')
     .option('--bundle-id <id>', 'App bundle identifier')
     .option('--platforms <list>', 'Target platforms, comma-separated (ios,android)', 'ios')
+    .option('--android-package <pkg>', 'Android package name (auto-detected if omitted)')
     .action((opts) => {
       const { platforms, error } = parsePlatforms(opts.platforms);
       if (error) {
@@ -82,19 +83,41 @@ export default function initCommand(program) {
         }
       }
 
+      // Determine Android package name
+      let androidPackage = opts.androidPackage || null;
+      if (!androidPackage && platforms.includes('android') && platforms[0] !== 'android') {
+        // Primary bundleId came from a non-android platform; detect the android package separately
+        androidPackage = detectBundleId('android');
+        if (androidPackage) {
+          console.log(chalk.dim(`Auto-detected Android package: ${androidPackage}`));
+        }
+      }
+      // Only store androidPackage when it differs from the primary key
+      if (androidPackage === bundleId) {
+        androidPackage = null;
+      }
+
+      const appEntry = { platforms, worktrees: {} };
+      if (androidPackage) {
+        appEntry.androidPackage = androidPackage;
+      }
+
       const existing = loadConfig();
       if (existing && existing.apps) {
         // Add or update app entry
-        existing.apps[bundleId] = existing.apps[bundleId] || { platforms: [], worktrees: {} };
-        existing.apps[bundleId].platforms = platforms;
+        const prev = existing.apps[bundleId] || { platforms: [], worktrees: {} };
+        prev.platforms = platforms;
+        if (androidPackage) {
+          prev.androidPackage = androidPackage;
+        } else {
+          delete prev.androidPackage;
+        }
+        existing.apps[bundleId] = prev;
         saveConfig(existing);
       } else {
         saveConfig({
           apps: {
-            [bundleId]: {
-              platforms,
-              worktrees: {},
-            },
+            [bundleId]: appEntry,
           },
         });
       }

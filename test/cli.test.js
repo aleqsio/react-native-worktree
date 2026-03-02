@@ -90,6 +90,53 @@ describe('CLI', () => {
       assert.notEqual(exitCode, 0);
       assert.ok(stderr.includes('Could not auto-detect'));
     });
+
+    it('detects differing android package from app.json', () => {
+      writeFileSync(
+        join(tmpDir, 'app.json'),
+        JSON.stringify({
+          expo: {
+            ios: { bundleIdentifier: 'com.test.my-app' },
+            android: { package: 'com.test.myapp' },
+          },
+        })
+      );
+      const { exitCode, stdout } = run(['init', '--platforms', 'ios,android'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('com.test.my-app'));
+
+      const config = readConfig();
+      assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.myapp');
+    });
+
+    it('omits androidPackage when it matches bundleId', () => {
+      writeFileSync(
+        join(tmpDir, 'app.json'),
+        JSON.stringify({
+          expo: {
+            ios: { bundleIdentifier: 'com.test.app' },
+            android: { package: 'com.test.app' },
+          },
+        })
+      );
+      const { exitCode } = run(['init', '--platforms', 'ios,android'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+
+      const config = readConfig();
+      assert.equal(config.apps['com.test.app'].androidPackage, undefined);
+    });
+
+    it('stores --android-package override', () => {
+      const { exitCode } = run([
+        'init', '--bundle-id', 'com.test.my-app',
+        '--platforms', 'ios,android',
+        '--android-package', 'com.test.custom',
+      ]);
+      assert.equal(exitCode, 0);
+
+      const config = readConfig();
+      assert.equal(config.apps['com.test.my-app'].androidPackage, 'com.test.custom');
+    });
   });
 
   describe('add', () => {

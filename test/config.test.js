@@ -83,6 +83,26 @@ describe('config', () => {
     });
   });
 
+  describe('getPackageName', () => {
+    it('returns androidPackage for android platform when set', async () => {
+      const { getPackageName } = await load();
+      const app = { platforms: ['ios', 'android'], androidPackage: 'com.test.myapp', worktrees: {} };
+      assert.equal(getPackageName(app, 'com.test.my-app', 'android'), 'com.test.myapp');
+    });
+
+    it('falls back to bundleId for android when androidPackage not set', async () => {
+      const { getPackageName } = await load();
+      const app = { platforms: ['android'], worktrees: {} };
+      assert.equal(getPackageName(app, 'com.test.app', 'android'), 'com.test.app');
+    });
+
+    it('always returns bundleId for ios regardless of androidPackage', async () => {
+      const { getPackageName } = await load();
+      const app = { platforms: ['ios', 'android'], androidPackage: 'com.test.myapp', worktrees: {} };
+      assert.equal(getPackageName(app, 'com.test.my-app', 'ios'), 'com.test.my-app');
+    });
+  });
+
   describe('getApp', () => {
     it('returns app when it exists', async () => {
       const { getApp } = await load();

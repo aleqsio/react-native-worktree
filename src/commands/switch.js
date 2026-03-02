@@ -1,4 +1,4 @@
-import { loadConfig, getWorktree, resolveApp, getApp } from '../config.js';
+import { loadConfig, getWorktree, resolveApp, getApp, getPackageName } from '../config.js';
 import { waitForLock } from '../lock.js';
 import { switchPort, isMetroRunning } from '../switcher.js';
 import chalk from 'chalk';
@@ -60,8 +60,9 @@ export default function switchCommand(program) {
       }
 
       // Switch port and relaunch app
+      const packageName = getPackageName(app, bundleId, platform);
       try {
-        switchPort(bundleId, wt.port, platform);
+        switchPort(packageName, wt.port, platform);
         console.log(chalk.green(`[${platform}] Switched to '${chalk.bold(name)}' (port ${wt.port}). App restarting...`));
       } catch (err) {
         console.error(chalk.red(`Failed to switch: ${err.message}`));

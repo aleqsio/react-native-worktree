@@ -55,6 +55,13 @@ export function getApp(config, bundleId) {
   return config.apps?.[bundleId] || null;
 }
 
+export function getPackageName(app, bundleId, platform) {
+  if (platform === 'android' && app.androidPackage) {
+    return app.androidPackage;
+  }
+  return bundleId;
+}
+
 export function resolveApp(config, bundleId) {
   if (!config || !config.apps) {
     return null;
