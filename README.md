@@ -35,9 +35,9 @@ Start multiple Claude Code sessions. Each agent works in a worktree:
 ```
 
 The agent will (guided by the skill):
-1. Create a git worktree and register it with `add` (auto-detects bundle ID and platform on first run)
+1. Create a git worktree and register it with `react-native-worktree add` (auto-detects bundle ID and platform on first run)
 2. Install dependencies and start Metro on the assigned port
-3. Call `react-native-worktree switch --platform ios` to acquire the device and preview
+3. Call `react-native-worktree switch --platform <platform>` to acquire the device and preview
 4. Heartbeat while you test, then release when done
 
 Meanwhile, another agent in a separate session:
